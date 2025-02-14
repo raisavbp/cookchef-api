@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import authMiddleware from "../middleware/authMiddleware.js";
+import AuthModel from "../models/AuthModel.js";
 
 dotenv.config();
 
@@ -48,12 +49,28 @@ router.post("/login", async (req, res) => {
   
       // Gerar um token JWT
       const token = jwt.sign(
-        { userId: user.id, nome: user.nome },
+        { userId: user.id, nome: user.nome, email: user.email },
         process.env.JWT_SECRET,
-        { expiresIn: "1h" } // O token expira em 1 hora
+        { expiresIn: "1h" }//expira em 1 hora
       );
+
+      // ✅ Gerar um refresh token
+    const refreshToken = jwt.sign(
+        { userId: user.id, nome: user.nome, email: user.email },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" } // Expira em 7 dias
+      );
+
+      // ✅ Salvar o refresh token no banco de dados
+    await AuthModel.saveRefreshToken(user.id, refreshToken);
   
-      res.json({ message: "Login bem-sucedido!", token });
+    // ✅ Enviar os tokens na resposta
+    res.json({
+        message: "Login bem-sucedido!",
+        token,
+        refreshToken
+      });
+  
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
