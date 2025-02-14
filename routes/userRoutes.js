@@ -3,11 +3,32 @@ import UserModel from "../models/UserModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import authMiddleware from "../middleware/authMiddleware.js";
 
 dotenv.config();
 
 const router = express.Router();
 
+// Endpoint para obter os dados do utilizador autenticado
+router.get("/me", authMiddleware, async (req, res) => {
+    try {
+      const user = await UserModel.getUserById(req.user.userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Utilizador não encontrado" });
+      }
+  
+      // Retorna os dados do utilizador (mas sem a senha)
+      res.json({
+        id: user.id,
+        nome: user.nome,
+        email: user.email,
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
 // Rota de login com JWT
 router.post("/login", async (req, res) => {
     try {

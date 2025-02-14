@@ -8,6 +8,9 @@ import passport from "./config/passport.js";
 import userRoutes from "./routes/userRoutes.js";
 import recipeRoutes from "./routes/recipeRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import favoriteRoutes from "./routes/favoriteRoutes.js";
+import collectionRoutes from "./routes/collectionRoutes.js";
+
 
 dotenv.config();
 
@@ -34,6 +37,13 @@ app.use(passport.session());
 app.use("/users", userRoutes);
 app.use("/recipes", recipeRoutes);
 app.use("/auth", authRoutes);
+
+//Favoritos
+app.use("/favorites", favoriteRoutes);
+
+//coleçoes
+app.use("/collections", collectionRoutes);
+
 
 // Testar conexão ao banco de dados
 async function testDBConnection() {
