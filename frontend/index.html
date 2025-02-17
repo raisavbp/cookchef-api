@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CookChef - Receitas Online</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>CookChef</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html">Início</a></li>
+                <li><a href="favoritos.html">Favoritos</a></li>
+                <li><a href="colecoes.html">Coleções</a></li>
+                <li id="login-nav"><a href="login.html">Login</a></li>
+                <li id="user-info" class="hidden">
+                    <span id="user-name"></span>
+                    <button id="logout-btn">Logout</button>
+                </li>
+            </ul>
+        </nav>
+    </header>
+    
+    
+    <!-- Seção para buscar receitas externas -->
+    <section id="search-external">
+        <h2>Buscar Receitas Externas</h2>
+        <input type="text" id="search-input" placeholder="Digite o nome da receita">
+        <button id="search-btn">Buscar</button>
+        <div id="external-recipes"></div>
+    </section>
+    
+    <main>
+        <section id="recipes">
+            <div class="categorias-container">
+                <h2>Categorias de Receitas</h2>
+                <div class="categorias-grid">
+                    <div class="categoria" onclick="redirectToCategory(1)">
+                        <img src="img/categorias/sobremesas.jpg" alt="Sobremesas">
+                        <p>Sobremesas</p>
+                    </div>
+                    <div class="category-card" onclick="redirectToCategory(2)">
+                        <img src="img/categorias/massas.jpg" alt="Massas">
+                        <p>Massas</p>
+                    </div>
+                    <div class="category-card" onclick="redirectToCategory(3)">
+                        <img src="img/categorias/carnes.jpg" alt="Carnes">
+                        <p>Carnes</p>
+                    </div>
+                    <div class="category-card" onclick="redirectToCategory(4)">
+                        <img src="img/categorias/saladas.jpg" alt="Saladas">
+                        <p>Saladas</p>
+                    </div>
+                    <div class="categoria" onclick="redirectToCategory(5)">
+                        <img src="img/categorias/frango.jpg" alt="Frango">
+                        <p>Frango</p>
+                    </div>
+                    <div class="categoria" onclick="redirectToCategory(6)">
+                        <img src="img/categorias/peixe.jpg" alt="Peixe">
+                        <p>Peixe</p>
+                    </div>
+                    <div class="categoria" onclick="redirectToCategory(7)">
+                        <img src="img/categorias/bebidas.jpg" alt="Bebidas">
+                        <p>Bebidas</p>
+                    </div>
+                </div>
+            </div>
+            
+        </section>
+    </main>
+
+    
+    <div id="recipe-list"></div>
+    <script src="js/app.js" defer></script>
+</body>
+</html>

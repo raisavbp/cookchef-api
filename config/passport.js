@@ -1,11 +1,10 @@
 import passport from "passport";
-import { Strategy as GoogleStrategy } from "passport-google-oauth2";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import dotenv from "dotenv";
-import UserModel from "../models/UserModel.js";
+import AuthModel from "../models/AuthModel.js";  
 
 dotenv.config();
 
-// Configurar a estratégia do Google
 passport.use(
   new GoogleStrategy(
     {
@@ -14,15 +13,18 @@ passport.use(
       callbackURL: process.env.GOOGLE_CALLBACK_URL,
       passReqToCallback: true,
     },
-    async (request, accessToken, refreshToken, profile, done) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
-        // Verificar se o utilizador já existe no banco de dados
-        let user = await UserModel.getUserByEmail(profile.email);
+        // Verificar se o usuário já existe no banco de dados
+        let user = await AuthModel.getUserByEmail(profile.emails[0].value);
 
         if (!user) {
-          // Criar um novo utilizador no banco de dados se ele não existir
-          const userId = await UserModel.createUser(profile.displayName, profile.email, "google-auth");
-          user = await UserModel.getUserById(userId);
+          // Se não existir, criar um novo usuário
+          user = await AuthModel.createUser({
+            nome: profile.displayName,
+            email: profile.emails[0].value,
+            googleId: profile.id,
+          });
         }
 
         return done(null, user);
@@ -33,14 +35,14 @@ passport.use(
   )
 );
 
-// Serialização do utilizador na sessão
+// Serialização e Desserialização do usuário para sessão
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
 
 passport.deserializeUser(async (id, done) => {
   try {
-    const user = await UserModel.getUserById(id);
+    const user = await AuthModel.getUserById(id);
     done(null, user);
   } catch (error) {
     done(error, null);

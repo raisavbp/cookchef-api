@@ -1,10 +1,11 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import axios from "axios";
+
 import pool from "./db.js"; // Importa a conexão com o banco de dados
 import session from "express-session";
 import passport from "./config/passport.js";
-
 import userRoutes from "./routes/userRoutes.js";
 import recipeRoutes from "./routes/recipeRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -29,7 +30,7 @@ app.use(
   })
 );
 
-// Inicializar Passport e sessão (DEPOIS do `session`)
+// Inicializar Passport e sessão 
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -62,8 +63,27 @@ app.get("/", (req, res) => {
   res.send("Servidor está a funcionar!");
 });
 
+/*async function testarAPIExterna() {
+  try {
+      console.log("🔍 Testando conexão com TheMealDB...");
+
+      const response = await axios.get("https://www.themealdb.com/api/json/v1/1/search.php?s=lasagna");
+
+      console.log("📥 Resposta da API externa:", response.data);
+  } catch (error) {
+      console.error("❌ Erro ao chamar API externa:", error.message);
+  }
+}
+
+// Chamar a função de teste quando o servidor iniciar
+testarAPIExterna();
+*/
+
+
 // Definição da porta
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor a correr na porta ${PORT}`);
 });
+
+

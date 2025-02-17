@@ -1,77 +1,119 @@
 import express from "express";
 import RecipeModel from "../models/RecipeModel.js";
 import authMiddleware from "../middleware/authMiddleware.js";
-
+import axios from "axios";
+import pool from "../db.js";
 
 const router = express.Router();
 
-// Criar uma nova receita
-router.post("/create", async (req, res) => {
-  try {
-    const { nome, autor_id, descricao, dificuldade, categoria_id, tempo, custo } = req.body;
-    const recipeId = await RecipeModel.createRecipe(nome, autor_id, descricao, dificuldade, categoria_id, tempo, custo);
-    res.status(201).json({ message: "Receita criada!", recipeId });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Buscar todas as receitas (APENAS PARA UTILIZADORES AUTENTICADOS)
-router.get("/", authMiddleware, async (req, res) => {
-  try {
-    const recipes = await RecipeModel.getAllRecipes();
-    res.json(recipes);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Buscar uma receita pelo ID
-router.get("/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const recipe = await RecipeModel.getRecipeById(id);
-    if (!recipe) return res.status(404).json({ message: "Receita não encontrada" });
-    res.json(recipe);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.get("/search", async (req, res) => {
+// Rota para buscar receitas externas da TheMealDB
+router.get("/external", async (req, res) => {
     try {
-      const { nome, ingredientes, categoria } = req.query;
-  
-      let query = "SELECT * FROM Receitas WHERE 1=1";
-      let params = [];
-  
-      if (nome) {
-        query += " AND nome LIKE ?";
-        params.push(`%${nome}%`);
-      }
-  
-      if (ingredientes) {
-        const ingredientesArray = ingredientes.split(",");
-        const ingredientesQuery = ingredientesArray.map(() => "ingredientes LIKE ?").join(" OR ");
-        query += ` AND (${ingredientesQuery})`;
-        params.push(...ingredientesArray.map(ing => `%${ing}%`));
-      }
-  
-      if (categoria) {
-        query += " AND categoria_id = ?";
-        params.push(categoria);
-      }
-  
-      const [results] = await pool.execute(query, params);
-  
-      if (results.length === 0) {
-        return res.status(404).json({ message: "Nenhuma receita encontrada." });
-      }
-  
-      res.json(results);
+        const { nome } = req.query;
+
+        if (!nome) {
+            return res.status(400).json({ message: "O nome da receita é obrigatório." });
+        }
+
+        console.log(`🔍 Buscando receita externa: ${nome}`);
+
+        // Fazendo a requisição para a API externa
+        const response = await axios.get(`https://www.themealdb.com/api/json/v1/1/search.php?s=${nome}`);
+
+        console.log("🌍 Resposta da API externa:", JSON.stringify(response.data, null, 2));
+
+        // Se não houver resultado
+        if (!response.data.meals || response.data.meals.length === 0) {
+            console.log("⚠️ Nenhuma receita encontrada na API externa.");
+            return res.status(404).json({ message: "Receita não encontrada na API externa." });
+        }
+
+        console.log("✅ Receita encontrada! Enviando resposta...");
+
+        // Retornamos apenas as informações relevantes
+        const receitasFormatadas = response.data.meals.map(meal => ({
+            id: meal.idMeal,
+            nome: meal.strMeal,
+            categoria: meal.strCategory,
+            area: meal.strArea,
+            instrucoes: meal.strInstructions,
+            imagem: meal.strMealThumb,
+            ingredientes: Object.entries(meal)
+                .filter(([key, value]) => key.startsWith("strIngredient") && value)
+                .map(([_, value]) => value)
+        }));
+
+        res.json(receitasFormatadas);
+
     } catch (error) {
-      res.status(500).json({ error: error.message });
+        console.error("❌ Erro ao buscar receitas externas:", error.message);
+        res.status(500).json({ error: "Erro ao buscar receitas externas." });
     }
-  });
+});
+
+// Adicionar ou remover favorito
+router.post("/favoritar", authMiddleware, async (req, res) => {
+  try {
+      const { recipe_id } = req.body;
+      const user_id = req.user.userId; // Obtém o ID do usuário autenticado
+
+      if (!recipe_id) {
+          return res.status(400).json({ message: "O ID da receita é obrigatório." });
+      }
+
+      // Verifica se a receita já está favoritada
+      const isFavorited = await RecipeModel.isFavorited(user_id, recipe_id);
+
+      if (isFavorited) {
+          // Se já estiver favoritada, remover dos favoritos
+          await RecipeModel.removeFavorite(user_id, recipe_id);
+          return res.json({ message: "Receita removida dos favoritos!" });
+      } else {
+          // Se não estiver favoritada, adicionar aos favoritos
+          await RecipeModel.addFavorite(user_id, recipe_id);
+          return res.json({ message: "Receita adicionada aos favoritos!" });
+      }
+  } catch (error) {
+      console.error("Erro ao favoritar receita:", error);
+      res.status(500).json({ error: "Erro interno no servidor" });
+  }
+});
+
+router.get("/", async (req, res) => {
+    try {
+        let query = "SELECT * FROM receitas";
+        const params = [];
+
+        if (req.query.categoria) {
+            query += " WHERE categoria_id = ?";
+            params.push(req.query.categoria);
+        }
+
+        const [rows] = await pool.execute(query, params);
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: "Erro ao buscar receitas" });
+    }
+});
+
+// Rota para buscar receitas por categoria
+router.get("/categoria/:categoria_id", async (req, res) => {
+    const { categoria_id } = req.params;
+
+    try {
+        const query = "SELECT * FROM receitas WHERE categoria_id = ?";
+        const [rows] = await pool.execute(query, [categoria_id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "Nenhuma receita encontrada para esta categoria." });
+        }
+
+        res.json(rows);
+    } catch (error) {
+        console.error("Erro ao buscar receitas:", error);
+        res.status(500).json({ message: "Erro no servidor ao buscar receitas." });
+    }
+});
+
 
 export default router;
